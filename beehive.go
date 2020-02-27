@@ -73,6 +73,34 @@ func NewSession() (*Session, error) {
 	return &result, nil
 }
 
+// Refresh updates a *Session's authentication data
+func (s *Session) Refresh() error {
+	t, err := newToken()
+	if err != nil {
+		return err
+	}
+	v, err := t.queryValues()
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest(http.MethodPost, (&url.URL{
+		Scheme:   scheme,
+		Host:     beehiveHost,
+		Path:     "sessions",
+		RawQuery: v.Encode(),
+	}).String(), nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Accept", nucleoAcceptHeader)
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	return json.NewDecoder(resp.Body).Decode(s)
+}
+
 // Session contains HTTP session data for use with the Neato Beehive API
 type Session struct {
 	AccessToken string    `json:"access_token"`
